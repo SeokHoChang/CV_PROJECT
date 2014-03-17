@@ -1,7 +1,7 @@
 package depthPack;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
-
+import static com.googlecode.javacv.cpp.opencv_highgui.*;
 import java.awt.Point;
 
 
@@ -16,12 +16,13 @@ public class FeatureDescriptor {
 	private static final int FI = 360;
 	private static final int ANGLE_SIZE=45;
 	private static final int ANGLE_BIN_SIZE = 8;
-	
+	private static final int RADIUS_BIN_SIZE = 4;
 	private static final int GRAD_BIN_SIZE_XY = 8;
 	private static final int GRAD_BIN_SIZE_YZ = 5;
 	private static final int GRAD_BIN_SIZE_XZ = 5;
-	private static final int RADIUS_BIN_SIZE = 4;
 	
+	
+	private static final int TRAINING_MAT_SIZE= ANGLE_BIN_SIZE*RADIUS_BIN_SIZE*(GRAD_BIN_SIZE_XY+GRAD_BIN_SIZE_XZ+GRAD_BIN_SIZE_YZ);
 	
 	private static final int WIDTH=90;
 	private static final int HEIGHT=90;
@@ -34,7 +35,7 @@ public class FeatureDescriptor {
 
 	private static final int MANHATTAN_DISTANCE_MODE = 0;
 
-
+	private static CvMat data;
 	private static CvMat[] NormMatArr;
 	private static double[][][] HistogramXY;
 	private static double[][][] HistogramYZ;
@@ -55,13 +56,92 @@ public class FeatureDescriptor {
 		
 	}
 	
-	public void makeFeatureHISTOGRAM(short[] DepthMap,int p , int l)
+	public CvMat get1DHistogram(short[] DepthMap,int p , int l)
 	{
 		
 		makeNormMatArr(DepthMap);
 		fillHIST(NormMatArr);
+		makeHistTo1DMat();
+		showHIST();
+		return data;
+	}
+	private void showHIST()
+	{
+		IplImage hist = cvCreateImage(cvSize(320, 240), IPL_DEPTH_8U, 3);
+		
+		for (int i = 0; i < TRAINING_MAT_SIZE; i++) {
+			
+			if(i<ANGLE_BIN_SIZE*RADIUS_BIN_SIZE*GRAD_BIN_SIZE_XY)
+			{ 
+				cvLine(hist,cvPoint(10+i, 220), cvPoint(10+i,(int)Math.round(220-data.get(0, i))), CV_RGB(255, 0,0), 1, CV_AA, 0);
+				//System.out.println((int)Math.round(220-data.get(0, i)));
+			}
+			else if(i>ANGLE_BIN_SIZE*RADIUS_BIN_SIZE*GRAD_BIN_SIZE_XY && i<TRAINING_MAT_SIZE-ANGLE_BIN_SIZE*RADIUS_BIN_SIZE*GRAD_BIN_SIZE_XZ)
+				{
+					cvLine(hist,cvPoint(10+i, 220), cvPoint(10+i,(int)Math.round(220-data.get(0, i))), CV_RGB(0, 255,0), 1, CV_AA, 0);
+					//System.out.println(data.get(0, i));
+				}
+			
+			else
+				{
+				
+					cvLine(hist,cvPoint(10+i, 220), cvPoint(10+i,(int)Math.round(220-data.get(0, i))), CV_RGB(0, 0,255), 1, CV_AA, 0);
+					//System.out.println((int)Math.round(220-data.get(0, i)));
+				}
+			
+		}
+		cvShowImage("hist",hist);
 		
 	}
+	
+	private void makeHistTo1DMat()
+	{
+		data= cvCreateMat(1,TRAINING_MAT_SIZE , CV_32FC1);
+		
+	for (int cnt = 0; cnt < 3; cnt++) 
+		for(int i=0;i<ANGLE_BIN_SIZE;i++)
+			for (int j = 0; j < RADIUS_BIN_SIZE; j++) {
+				
+				
+				switch (cnt) {
+				case 0:
+					for (int k = 0; k < GRAD_BIN_SIZE_XY; k++) {
+						int idx= i*(RADIUS_BIN_SIZE*GRAD_BIN_SIZE_XY)+j*GRAD_BIN_SIZE_XY+k;
+						data.put(0, idx, HistogramXY[i][j][k]);
+						
+					}
+					
+					break;
+				case 1:
+					for (int k = 0; k < GRAD_BIN_SIZE_YZ; k++) {
+						int idx= ANGLE_BIN_SIZE*RADIUS_BIN_SIZE*GRAD_BIN_SIZE_XY
+								+i*(RADIUS_BIN_SIZE*GRAD_BIN_SIZE_YZ)+j*GRAD_BIN_SIZE_YZ+k;
+						
+						data.put(0, idx, HistogramYZ[i][j][k]);
+						
+						
+					}
+					break;
+				case 2:
+					for (int k = 0; k < GRAD_BIN_SIZE_XZ; k++) {
+						int idx= ANGLE_BIN_SIZE*RADIUS_BIN_SIZE*GRAD_BIN_SIZE_XY
+								+ANGLE_BIN_SIZE*RADIUS_BIN_SIZE*GRAD_BIN_SIZE_YZ
+								+i*(RADIUS_BIN_SIZE*GRAD_BIN_SIZE_XZ)+j*GRAD_BIN_SIZE_XZ+k;
+						
+						data.put(0, idx, HistogramXZ[i][j][k]);
+				
+					}
+					break;
+				default:
+					break;
+				}
+				
+				
+			}
+		
+	}
+	
+	
 	private void fillHIST(CvMat[] NormMatArr)
 	{
 		double[] BinNumXY,BinNumXZ,BinNumYZ;
@@ -83,7 +163,7 @@ public class FeatureDescriptor {
 			double[] weightsXY= calcWeight(BinNumXY[0], BinNumXY[1], BinNumXY[2]);
 			double[] weightsYZ= calcWeight(BinNumYZ[0], BinNumYZ[1], BinNumYZ[2]);
 			double[] weightsXZ= calcWeight(BinNumXZ[0], BinNumXZ[1], BinNumXZ[2]);
-			
+			 
 			int idx_ANGLE,idx_RADIUS;
 			if((idx_ANGLE= getAngleBin(i))==-1)
 				continue;

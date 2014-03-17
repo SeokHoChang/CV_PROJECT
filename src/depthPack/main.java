@@ -337,7 +337,7 @@ public class main {
 		        	   caputureBoxImage(DepthMap,capture);
 		        	   FeatureDescriptor fd = new FeatureDescriptor();
 		        	   
-		        	   fd.makeFeatureHISTOGRAM(captureArr, 0, 1);
+		        	   fd.get1DHistogram(captureArr, 0, 1);
 		        	  break;
 		          case 'n':
 		        	  Chkmatch=false;
