@@ -62,9 +62,10 @@ public class main {
 	private static final double RATIO = 0.5; 
 	private static  HashMap<Number, Number> map ;
 	
-
 	
-	private static short[] depthmap_V,depthmap_R,depthmap_G,depthmap_B;
+	private static CvMat data;
+	
+	private static short[] depthmap_V,depthmap_R,depthmap_G,depthmap_B,depthmap_temp;
 
 	private static short[] captureArr;
 	private static int[] Size,RGB,RGB_SIZE;
@@ -72,6 +73,7 @@ public class main {
 	private static int minRange,maxRange,Range;
 	private static PXCUPipeline pp;
 	private static TestSetMaker tsMkr ;
+	private static Classifier classifier;
 	private static CvRect CaptureBox,ROIBox;
 	
 	private static CvMemStorage storage,storage1;
@@ -79,8 +81,13 @@ public class main {
 	private static CvSURFParams params;
 	public static void init()
 	{
+		
+		data = cvCreateMat(3, 576, CV_32FC1);
+		
 		tsMkr= new TestSetMaker();
 		TestSetMaker.createTestFile();
+		classifier= new Classifier();
+		
 		
 		CaptureBox = cvRect(CaputureBox_X, CaputureBox_Y, CaputureBox_WIDTH, CaputureBox_HEIGHT);
 		ROIBox = cvRect(0, 0, CaputureBox_WIDTH, CaputureBox_HEIGHT);
@@ -90,6 +97,8 @@ public class main {
 		depthmap_R= new short[MATSIZE];
 		depthmap_G= new short[MATSIZE];
 		depthmap_B= new short[MATSIZE];
+		depthmap_temp= new short[MATSIZE];
+		
 		RGB 	  = new int[10000000];
 		Size= new int[2];
 		RGB_SIZE= new int[2];
@@ -274,6 +283,8 @@ public class main {
 						depthmap_B[i]=(short) (depthmap_V[i]/(double)255*255);
 					
 					}
+				else
+					depthmap_V[i]=255;
 			}
 	           
 	         
@@ -305,22 +316,32 @@ public class main {
 		          if(Chkmatch==true){
 		        	 // findHand(DepthMap);
 		        	  
-		        	  drawSURFpt(DepthMap_3C,objectKeypoints);
+		        	 // drawSURFpt(DepthMap_3C,objectKeypoints);
 		        	  
-		        	  cvExtractSURF(DepthMap, null, imageKeypoints,  imageDescriptors, storage1,params, 0); 
+		        	 // cvExtractSURF(DepthMap, null, imageKeypoints,  imageDescriptors, storage1,params, 0); 
 		              
 		              
 		             // drawSURFpt(DepthMap_3C,imageKeypoints);
 		              
 		           
-		        	 matchingSURFpts(imageKeypoints, imageDescriptors, objectKeypoints, objectDescriptors, DepthMap_3C);
-		        	 drawSURFLine(DepthMap_3C, objectKeypoints, imageKeypoints);
+		        	// matchingSURFpts(imageKeypoints, imageDescriptors, objectKeypoints, objectDescriptors, DepthMap_3C);
+		        	// drawSURFLine(DepthMap_3C, objectKeypoints, imageKeypoints);
 		     		
-		             getCentroid(capture);
+		           //  getCentroid(capture);
 		          }
 		          
 		          
 		          cvDrawRect(DepthMap_3C,cvPoint(10, 10),cvPoint(100,100), cvScalar(0,255, 0, 0), 2,0, 0);
+		          cvDrawCircle(DepthMap_3C,cvPoint(55, 55),2 , cvScalar(0,255, 0, 0), 2,0, 0);
+		          
+		          cvDrawCircle(DepthMap_3C,cvPoint(55, 55),36, cvScalar(0,255, 0, 0), 1,0, 0);
+		          cvDrawCircle(DepthMap_3C,cvPoint(55, 55),27, cvScalar(0,255, 0, 0), 1,0, 0);
+		          cvDrawCircle(DepthMap_3C,cvPoint(55, 55),18, cvScalar(0,255, 0, 0), 1,0, 0);
+		          cvDrawCircle(DepthMap_3C,cvPoint(55, 55), 9, cvScalar(0,255, 0, 0), 1,0, 0);
+		          for (int i = 0; i < 8; i++) {
+					
+		        	  cvLine(DepthMap_3C, cvPoint(55,55), cvPoint((int)(36*Math.cos((i*45/180.0)*Math.PI))+55,(int)(36*Math.sin((i*45/180.0)*Math.PI))+55), cvScalar(0,255, 0, 0),1, 0, 0);
+				}
 		          
 		          
 		          cvShowImage("depth3C", DepthMap_3C);
@@ -331,20 +352,54 @@ public class main {
 		            
 		          switch(cvWaitKey(10))
 		          {
+		          case '0':
+		        	  caputureBoxImage(DepthMap,capture);
+		        	  FeatureDescriptor fd0 = new FeatureDescriptor();
+		        	  CvMat data0=fd0.get1DHistogram(captureArr, 0, 1);
+		        	  
+		        	  for (int i = 0; i < 576; i++) 
+						data.put(0, i, data0.get(0, i));
+					
+		        	
+		        	  break;
+		          case '1':
+		        	  caputureBoxImage(DepthMap,capture);
+		        	  FeatureDescriptor fd1 = new FeatureDescriptor();
+		        	  CvMat data1=fd1.get1DHistogram(captureArr, 0, 1);
+		        	  
+		        	  for (int i = 0; i < 576; i++) 
+							data.put(1, i, data1.get(0, i));
+						
+		        	  break;
+		          case '2':
+		        	  caputureBoxImage(DepthMap,capture);
+		        	  FeatureDescriptor fd2 = new FeatureDescriptor();
+		        	  CvMat data2=fd2.get1DHistogram(captureArr, 0, 1);
+		        	  
+		        	  for (int i = 0; i < 576; i++) 
+							data.put(2, i, data2.get(0, i));
+						
+		        	  break;
+		          
 		          
 		          case 'y':
 		        	  Chkmatch=true;
-		        	   caputureBoxImage(DepthMap,capture);
-		        	   FeatureDescriptor fd = new FeatureDescriptor();
-		        	   
-		        	   fd.get1DHistogram(captureArr, 0, 1);
+		        	  
+		        	  classifier.trainSVM(data,1);
 		        	  break;
+		        
 		          case 'n':
 		        	  Chkmatch=false;
-		        	  
+		        	  caputureBoxImage(DepthMap,capture);
+		        	  FeatureDescriptor fd3 = new FeatureDescriptor();
+		        	 
+		        	  CvMat data3=fd3.get1DHistogram(captureArr, 0, 1);
+		        
+		        	 classifier.classify(data3);
 		        	  break;
+		         
 		          case 'f': 
-		        	  
+	
 		        	  break;
 		        	  
 		          }
@@ -368,7 +423,7 @@ public class main {
 		
 		for(int i=0,j=0; i< MATSIZE;i++)
 		{
-			if((i%320)<90 && (i/320)<90)
+			if((i%320)<CaputureBox_WIDTH && (i/320)<CaputureBox_HEIGHT)
 			{
 				captureArr[j++]=depthmap_V[i];
 			}
@@ -420,7 +475,7 @@ public class main {
 //		
 //		//cvWaitKey(1);
 //		}
-//		//System.out.println(x);
+//		//fprintln(x);
 //		}
 	}
 	public static double calcVectorDist(FloatBuffer obj_vec, FloatBuffer img_vec, int dim)
@@ -534,7 +589,10 @@ public class main {
 		
 
 		cvDrawCircle(DepthMap_3C, cvPoint(Xc_hand, Yc_hand), 2, cvScalar(255, 255, 255, 0), 3, CV_AA, 0);
-		cvDrawCircle(DepthMap_3C, cvPoint(Xc_hand, Yc_hand), 35, cvScalar(255, 255, 255, 0), 2, CV_AA, 0);
+		
+		cvDrawCircle(DepthMap_3C, cvPoint(Xc_hand, Yc_hand), 36, cvScalar(255, 255, 255, 0), 1, CV_AA, 0);
+		
+		
 		
 		
 		
@@ -552,8 +610,8 @@ public class main {
         	init();
         
 	      // makeTestSet();
-	       //loadTestSet();
-        	realTimeShow();
+	       loadTestSet();
+        	//realTimeShow();
         	pp.Close();
 
 	        System.exit(0);
