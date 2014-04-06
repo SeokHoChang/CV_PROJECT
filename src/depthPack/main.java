@@ -57,7 +57,7 @@ public class main {
 	private static final int CaputureBox_HEIGHT=90;
 	private static final int CaputureBox_MAT_SIZE=90*90;
 	
-	
+	public static int cnt=0;
 	private static final double THRESHOLD= 0.4;
 	private static final double RATIO = 0.5; 
 	private static  HashMap<Number, Number> map ;
@@ -72,7 +72,7 @@ public class main {
 	private static IplImage RgbMap,DepthMap,testMap,capture,DepthMap_3C,CurrentROI,DepthMap_R,DepthMap_G,DepthMap_B;
 	private static int minRange,maxRange,Range;
 	private static PXCUPipeline pp;
-	private static TestSetMaker tsMkr ;
+	private static TestSetMaker tsMkr,testSets ;
 	private static Classifier classifier;
 	private static CvRect CaptureBox,ROIBox;
 	
@@ -85,8 +85,13 @@ public class main {
 		data = cvCreateMat(3, 576, CV_32FC1);
 		
 		tsMkr= new TestSetMaker();
-		TestSetMaker.createTestFile();
+		
+		testSets = new TestSetMaker();
+		testSets.createTestFile("hand4.dat");
+		testSets.recordReady(90, 90	);
+		
 		classifier= new Classifier();
+		
 		
 		
 		CaptureBox = cvRect(CaputureBox_X, CaputureBox_Y, CaputureBox_WIDTH, CaputureBox_HEIGHT);
@@ -149,9 +154,10 @@ public class main {
 
 	        }
 	}
-	public static void makeTestSet()
+	public static void makeTestSet(TestSetMaker ts,String file)
 	{
-		TestSetMaker.recordReady();
+		ts.createTestFile(file);
+		ts.recordReady(320,240);
 		
 		   for (int k =0;k<50;k++) {
 
@@ -169,7 +175,7 @@ public class main {
 	
 			}
 	           
-	            TestSetMaker.recordTestFrameSet(depthmap_V);
+	            ts.recordTestFrameSet(depthmap_V,320,240);
 	           	  Pointer pt= new ShortPointer(depthmap_V);
 		          CvMat mat = cvMat(240, 320, CV_16UC1, pt);
 		          cvConvert(mat, DepthMap);
@@ -181,42 +187,51 @@ public class main {
 		            pp.ReleaseFrame();
 		           cvWaitKey(10);
 		   }
-		TestSetMaker.recordFinish();
+		ts.recordFinish();
 		   
 	}
 	
 	
-	public static void loadTestSet()
+	
+	
+	public static void loadTestSet(String fname, int width,int height)
 	{
-		TestSetMaker.loadReady();
+		
+		TestSetMaker.loadReady(fname,width);
+		
+		IplImage result = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
+		short[] depthData = new short[width*height];
+		
 		
 		for(;;){
-			if((depthmap_V=TestSetMaker.loadTestFrameSet())==null)
+			if((depthData=TestSetMaker.loadTestFrameSet())==null)
 				{
 					TestSetMaker.loadFinish();
 					return;
 				}
-			
-			 Pointer pt= new ShortPointer(depthmap_V);
-	          CvMat mat = cvMat(240, 320, CV_16UC1, pt);
-	          cvConvert(mat, DepthMap);
+			FeatureDescriptor fd0 = new FeatureDescriptor();
+      	  
+      	  CvMat data0=fd0.get1DHistogram(depthData, 0, 1);
+			 Pointer pt= new ShortPointer(depthData);
+	          CvMat mat = cvMat(height, width, CV_16UC1, pt);
+	          cvConvert(mat, result);
 	          
 	         
 	          
-	          for(int i=minRange;i<maxRange;i++){
-	        	  cvInRangeS(DepthMap, cvScalarAll(i), cvScalarAll(i+Range), testMap);
+	        //  for(int i=minRange;i<maxRange;i++){
+	        //	  cvInRangeS(DepthMap, cvScalarAll(i), cvScalarAll(i+Range), testMap);
 	        	 // cvNot(testMap, testMap);
 	        	 // cvShowImage("test", testMap);
 	        	  //templateMatch(testMap);
 	        	  //cvWaitKey(1);
-	          }
-	          cvNot(DepthMap, DepthMap);
+	       //   }
+	        
 	          
-
-	          cvShowImage("depth", DepthMap);
+        	  cvNot(result, result);
+	          cvShowImage("depth", result);
 	         cvWaitKey(200);
 	     
-	         pp.ReleaseFrame();
+
 	           
 			
 		}
@@ -344,17 +359,27 @@ public class main {
 				}
 		          
 		          
-		          cvShowImage("depth3C", DepthMap_3C);
-		          cvShowImage("depth1C", DepthMap);
-			      cvShowImage("RGB", RgbMap	);   
-			     
+		        
 			      
 		            
 		          switch(cvWaitKey(10))
 		          {
+		          
+		          case 'c':
+		        	  
+		        	  caputureBoxImage(DepthMap,capture);
+		        	
+		        	  System.out.println(cnt++);
+		        	  break;
+		          case 's':
+		        	  testSets.recordFinish();
+		        	  
+		        	  break;
+		        	  
 		          case '0':
 		        	  caputureBoxImage(DepthMap,capture);
 		        	  FeatureDescriptor fd0 = new FeatureDescriptor();
+		        	  
 		        	  CvMat data0=fd0.get1DHistogram(captureArr, 0, 1);
 		        	  
 		        	  for (int i = 0; i < 576; i++) 
@@ -404,7 +429,11 @@ public class main {
 		        	  
 		          }
 		          
-		          
+		          cvShowImage("depth3C", DepthMap_3C);
+		          cvShowImage("depth1C", DepthMap);
+			      cvShowImage("RGB", RgbMap	);   
+			     
+			      
 		          pp.ReleaseFrame();
 		   }
 	}
@@ -428,7 +457,8 @@ public class main {
 				captureArr[j++]=depthmap_V[i];
 			}
 		}
-	
+		testSets.recordTestFrameSet(captureArr, 90, 90);
+		
        cvExtractSURF(capture, null, objectKeypoints, objectDescriptors, storage, params, 0);
  
 	}
@@ -607,12 +637,15 @@ public class main {
 		// TODO Auto-generated method stub
 		
 		
-        	init();
+        	//init();
         
 	      // makeTestSet();
-	       loadTestSet();
+	       loadTestSet("hand4.dat",90,90);
         	//realTimeShow();
-        	pp.Close();
+        	
+        	
+        	
+        	//pp.Close();
 
 	        System.exit(0);
 

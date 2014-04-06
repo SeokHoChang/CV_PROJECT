@@ -23,6 +23,7 @@ public class TestSetMaker {
 	private static BufferedInputStream fis=null;
 	private static int data_len=0;
 	
+	private static String fname;
 	private static byte[] toBytes(Short input)
 	{
 
@@ -41,12 +42,14 @@ public class TestSetMaker {
          return newValue;
 	}
 
-	public static void createTestFile()
+	public static void createTestFile(String file)
 	{
-		File f = new File("testSet.dat");
+		fname=file;
+		File f = new File(fname);
 		if(!f.exists())
 		{
 			try {
+				
 				f.createNewFile();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -55,15 +58,15 @@ public class TestSetMaker {
 		}
 	}
 	
-	public static void recordReady()
+	public static void recordReady(int width,int height)
 	{
 		try {
-			fos = new FileOutputStream("testSet.dat");
-			bos = new BufferedOutputStream(fos,320);
+			fos = new FileOutputStream(fname);
+			bos = new BufferedOutputStream(fos,width);
 
 		int offset=0;
-		bos.write(toBytes( (short) 320),offset,2);
-		bos.write(toBytes( (short) 240),offset,2);
+		bos.write(toBytes( (short) width),offset,2);
+		bos.write(toBytes( (short) height),offset,2);
 
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -88,14 +91,14 @@ public class TestSetMaker {
 			}
 		}
 	}
-	public static void recordTestFrameSet(short[] data) 
+	public static void recordTestFrameSet(short[] data,int width,int height) 
 	{
 	
 		
 		int offset=0;
 		try {
 
-			for(int i=0; i<76800;i++)
+			for(int i=0; i<width*height;i++)
 			{
 //			System.out.println(data[i]+", "+offset);		
 				bos.write(toBytes(data[i]),offset,2);
@@ -113,15 +116,15 @@ public class TestSetMaker {
 		
 		
 	}
-	public static void loadReady()
+	public static void loadReady(String name,int width)
 	{
 
 		byte[] temp= new byte[2];
 		short[] data = null;
 		int offset=0;
 		try {
-			file = new FileInputStream("testSet.dat");
-			fis = new BufferedInputStream(file,320);
+			file = new FileInputStream(name);
+			fis = new BufferedInputStream(file,width);
 			
 			fis.read(temp,offset,2);
 			data_len=bytesToShort(temp);
