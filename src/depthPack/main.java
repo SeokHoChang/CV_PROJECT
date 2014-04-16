@@ -64,6 +64,7 @@ public class main {
 	
 	
 	private static CvMat data;
+	private static CvMat[] dataSets;
 	
 	private static short[] depthmap_V,depthmap_R,depthmap_G,depthmap_B,depthmap_temp;
 
@@ -82,13 +83,13 @@ public class main {
 	public static void init()
 	{
 		
-		data = cvCreateMat(3, 576, CV_32FC1);
+		dataSets = new CvMat[30];
+		for (int j = 0; j < 30; j++) {
+
+			dataSets[j] = cvCreateMat(2, 576, CV_32FC1);
+
+		}
 		
-		tsMkr= new TestSetMaker();
-		
-		testSets = new TestSetMaker();
-		testSets.createTestFile("hand4.dat");
-		testSets.recordReady(90, 90	);
 		
 		classifier= new Classifier();
 		
@@ -154,6 +155,15 @@ public class main {
 
 	        }
 	}
+	public static void testSet_init()
+	{
+		tsMkr= new TestSetMaker();
+		
+		testSets = new TestSetMaker();
+		testSets.createTestFile("hand4.dat");
+		testSets.recordReady(90, 90	);
+	}
+	
 	public static void makeTestSet(TestSetMaker ts,String file)
 	{
 		ts.createTestFile(file);
@@ -194,7 +204,7 @@ public class main {
 	
 	
 	
-	public static void loadTestSet(String fname, int width,int height)
+	public static void loadTestSet(String fname, int width,int height,int classnum)
 	{
 		
 		TestSetMaker.loadReady(fname,width);
@@ -212,30 +222,62 @@ public class main {
 			FeatureDescriptor fd0 = new FeatureDescriptor();
       	  
       	  CvMat data0=fd0.get1DHistogram(depthData, 0, 1);
+      	  
+      	 
+      	  
 			 Pointer pt= new ShortPointer(depthData);
 	          CvMat mat = cvMat(height, width, CV_16UC1, pt);
 	          cvConvert(mat, result);
 	          
-	         
-	          
-	        //  for(int i=minRange;i<maxRange;i++){
-	        //	  cvInRangeS(DepthMap, cvScalarAll(i), cvScalarAll(i+Range), testMap);
-	        	 // cvNot(testMap, testMap);
-	        	 // cvShowImage("test", testMap);
-	        	  //templateMatch(testMap);
-	        	  //cvWaitKey(1);
-	       //   }
-	        
-	          
         	  cvNot(result, result);
-	          cvShowImage("depth", result);
-	         cvWaitKey(200);
+	        
+        	  cvShowImage("depth", result);
+	        cvWaitKey(1);
 	     
 
 	           
 			
 		}
 	}
+	public static void loadTestSets()
+	{
+		
+		
+		
+		
+		short[] depthData = new short[90*90];
+		
+		for (int k = 0; k < 2; k++) {
+			System.out.println(k+"-training");
+
+		TestSetMaker.loadReady("hand"+(k+1)+".dat",90);
+		
+		for(int i =0; i<30;i++){
+			if((depthData=TestSetMaker.loadTestFrameSet())==null)
+				{
+					System.out.println("done"+k+1);
+					TestSetMaker.loadFinish();
+					break;
+				}
+			FeatureDescriptor fd0 = new FeatureDescriptor();
+      	  
+      	  CvMat data0=fd0.get1DHistogram(depthData, 0, 0);
+      	  
+      	  for (int j = 0; j < 576; j++) 
+				dataSets[i].put(k, j, (float)data0.get(0, j)/(float)100);
+	
+		}
+		
+		
+		}
+		for (int i = 0; i < 2; i++) {
+			classifier.trainSVM(dataSets[i], 0);
+			//classifier.trainBOOST(dataSets[i], 0);
+		}
+		
+	}
+	
+	
 	public static void templateMatch(IplImage map)
 	{
 		double[] min_val ,max_val;
@@ -367,7 +409,7 @@ public class main {
 		          
 		          case 'c':
 		        	  
-		        	  caputureBoxImage(DepthMap,capture);
+		        	  caputureBoxImage(DepthMap,capture,1);
 		        	
 		        	  System.out.println(cnt++);
 		        	  break;
@@ -377,7 +419,7 @@ public class main {
 		        	  break;
 		        	  
 		          case '0':
-		        	  caputureBoxImage(DepthMap,capture);
+		        	  caputureBoxImage(DepthMap,capture,1);
 		        	  FeatureDescriptor fd0 = new FeatureDescriptor();
 		        	  
 		        	  CvMat data0=fd0.get1DHistogram(captureArr, 0, 1);
@@ -388,7 +430,7 @@ public class main {
 		        	
 		        	  break;
 		          case '1':
-		        	  caputureBoxImage(DepthMap,capture);
+		        	  caputureBoxImage(DepthMap,capture,1);
 		        	  FeatureDescriptor fd1 = new FeatureDescriptor();
 		        	  CvMat data1=fd1.get1DHistogram(captureArr, 0, 1);
 		        	  
@@ -397,7 +439,7 @@ public class main {
 						
 		        	  break;
 		          case '2':
-		        	  caputureBoxImage(DepthMap,capture);
+		        	  caputureBoxImage(DepthMap,capture,1);
 		        	  FeatureDescriptor fd2 = new FeatureDescriptor();
 		        	  CvMat data2=fd2.get1DHistogram(captureArr, 0, 1);
 		        	  
@@ -415,12 +457,13 @@ public class main {
 		        
 		          case 'n':
 		        	  Chkmatch=false;
-		        	  caputureBoxImage(DepthMap,capture);
+		        	  caputureBoxImage(DepthMap,capture,0);
 		        	  FeatureDescriptor fd3 = new FeatureDescriptor();
 		        	 
 		        	  CvMat data3=fd3.get1DHistogram(captureArr, 0, 1);
 		        
-		        	 classifier.classify(data3);
+		        	 classifier.classifySVM(data3);
+		        	// classifier.classifyBOOST(data3);
 		        	  break;
 		         
 		          case 'f': 
@@ -437,7 +480,7 @@ public class main {
 		          pp.ReleaseFrame();
 		   }
 	}
-	public static void caputureBoxImage(IplImage DepthMap,IplImage capture)
+	public static void caputureBoxImage(IplImage DepthMap,IplImage capture,int mode)
 	{
 		
 		cvSetImageROI(DepthMap, CaptureBox);
@@ -457,6 +500,7 @@ public class main {
 				captureArr[j++]=depthmap_V[i];
 			}
 		}
+		if(mode==1)
 		testSets.recordTestFrameSet(captureArr, 90, 90);
 		
        cvExtractSURF(capture, null, objectKeypoints, objectDescriptors, storage, params, 0);
@@ -637,15 +681,24 @@ public class main {
 		// TODO Auto-generated method stub
 		
 		
-        	//init();
+        	init();
         
 	      // makeTestSet();
-	       loadTestSet("hand4.dat",90,90);
-        	//realTimeShow();
+	      // loadTestSet("hand1.dat",90,90,0);
+	      // loadTestSet("hand2.dat",90,90,1);
+	      // loadTestSet("hand3.dat",90,90,2);
+	       //loadTestSet("hand4.dat",90,90,3);
         	
+        	loadTestSets();
+        	loadTestSets();
+        	loadTestSets();
+        	//loadTestSets();
         	
+        	realTimeShow();
         	
-        	//pp.Close();
+        	//classifier.testCode();
+        	
+        	pp.Close();
 
 	        System.exit(0);
 
