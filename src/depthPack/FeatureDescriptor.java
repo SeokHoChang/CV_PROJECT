@@ -86,6 +86,7 @@ public class FeatureDescriptor {
 		makeNormMatArr(DepthMap);
 		fillHIST(NormMatArr);
 		makeHistTo1DMat();
+		
 		if(l==1)
 		showHIST();
 		return data;

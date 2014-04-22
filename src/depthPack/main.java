@@ -160,7 +160,7 @@ public class main {
 		tsMkr= new TestSetMaker();
 		
 		testSets = new TestSetMaker();
-		testSets.createTestFile("hand4.dat");
+		testSets.createTestFile("hand2.dat");
 		testSets.recordReady(90, 90	);
 	}
 	
@@ -212,8 +212,14 @@ public class main {
 		IplImage result = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
 		short[] depthData = new short[width*height];
 		
+		CvFont font = new CvFont();
+		
+		cvInitFont(font, CV_FONT_HERSHEY_COMPLEX, 0.5, 0.5,0,0,0	);
+		
+		int n=0;
 		
 		for(;;){
+			
 			if((depthData=TestSetMaker.loadTestFrameSet())==null)
 				{
 					TestSetMaker.loadFinish();
@@ -230,19 +236,21 @@ public class main {
 	          cvConvert(mat, result);
 	          
         	  cvNot(result, result);
-	        
+        	  cvPutText(result, "Cnt:"+n++ , cvPoint(10, 	20), font, CV_RGB(0,0,255));	
         	  cvShowImage("depth", result);
+        	  
+        	  
 	        cvWaitKey(1);
 	     
 
-	           
+	           cvReleaseMat(data0);
+	           cvReleaseMat(mat);
+	         
 			
 		}
 	}
-	public static void loadTestSets()
+	public static void loadTestSets(int max)
 	{
-		
-		
 		
 		
 		short[] depthData = new short[90*90];
@@ -252,7 +260,7 @@ public class main {
 
 		TestSetMaker.loadReady("hand"+(k+1)+".dat",90);
 		
-		for(int i =0; i<30;i++){
+		for(int i =0; i<max;i++){
 			if((depthData=TestSetMaker.loadTestFrameSet())==null)
 				{
 					System.out.println("done"+k+1);
@@ -410,8 +418,8 @@ public class main {
 		          case 'c':
 		        	  
 		        	  caputureBoxImage(DepthMap,capture,1);
-		        	
 		        	  System.out.println(cnt++);
+		        	 
 		        	  break;
 		          case 's':
 		        	  testSets.recordFinish();
@@ -683,15 +691,16 @@ public class main {
 		
         	init();
         
+        	//testSet_init();
 	      // makeTestSet();
-	      // loadTestSet("hand1.dat",90,90,0);
-	      // loadTestSet("hand2.dat",90,90,1);
+	       // loadTestSet("hand1.dat",90,90,0);
+	       loadTestSet("hand2.dat",90,90,1);
 	      // loadTestSet("hand3.dat",90,90,2);
 	       //loadTestSet("hand4.dat",90,90,3);
         	
-        	loadTestSets();
-        	loadTestSets();
-        	loadTestSets();
+        	//loadTestSets();
+        	//loadTestSets();
+        	//loadTestSets();
         	//loadTestSets();
         	
         	realTimeShow();
