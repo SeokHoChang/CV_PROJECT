@@ -45,6 +45,8 @@ public class main {
 
 	private static final int MATSIZE = 320*240;
 	
+	private static final int DATSIZE = 320;
+	
 	///Used measure is Milimeter
 	private static final int MAX_DIST = 1000;//mm
 	private static final int MIN_SEARCH_RANGE=270;//mm
@@ -62,7 +64,7 @@ public class main {
 	private static final double RATIO = 0.5; 
 	private static  HashMap<Number, Number> map ;
 	
-	
+	private static CvMat dataTest;
 	private static CvMat data;
 	private static CvMat[] dataSets;
 	
@@ -83,10 +85,12 @@ public class main {
 	public static void init()
 	{
 		
-		dataSets = new CvMat[30];
-		for (int j = 0; j < 30; j++) {
+		dataSets = new CvMat[2];
+		dataTest = cvCreateMat(1, DATSIZE, CV_32FC1);
+		
+		for (int j = 0; j < 2; j++) {
 
-			dataSets[j] = cvCreateMat(2, 576, CV_32FC1);
+			dataSets[j] = cvCreateMat(2, DATSIZE, CV_32FC1);
 
 		}
 		
@@ -240,49 +244,64 @@ public class main {
         	  cvShowImage("depth", result);
         	  
         	  
-	        cvWaitKey(1);
+        	  cvWaitKey(1);
 	     
 
 	           cvReleaseMat(data0);
-	           cvReleaseMat(mat);
 	         
 			
 		}
 	}
-	public static void loadTestSets(int max)
+	public static void loadTestSets(int num,int max)
 	{
+		TestSetMaker ts1= new TestSetMaker();
+		TestSetMaker ts2= new TestSetMaker();
 		
+		short[] depthData1 = new short[90*90];
+		short[] depthData2 = new short[90*90];
 		
-		short[] depthData = new short[90*90];
+		FeatureDescriptor fd0 = new FeatureDescriptor();
+      	FeatureDescriptor fd1 = new FeatureDescriptor();
+    	    
+		ts1.loadReady("hand1"+".dat",90);
+		ts1.loadReady("hand2"+".dat",90);
 		
-		for (int k = 0; k < 2; k++) {
-			System.out.println(k+"-training");
-
-		TestSetMaker.loadReady("hand"+(k+1)+".dat",90);
-		
+			System.out.println("training");
+		CvMat data0 = null,data1 = null;
 		for(int i =0; i<max;i++){
-			if((depthData=TestSetMaker.loadTestFrameSet())==null)
+			if((depthData1=ts1.loadTestFrameSet())==null||(depthData2=ts2.loadTestFrameSet())==null)
 				{
-					System.out.println("done"+k+1);
-					TestSetMaker.loadFinish();
+					System.out.println("done");
+					ts1.loadFinish();
+					ts2.loadFinish();
 					break;
 				}
-			FeatureDescriptor fd0 = new FeatureDescriptor();
-      	  
-      	  CvMat data0=fd0.get1DHistogram(depthData, 0, 0);
-      	  
-      	  for (int j = 0; j < 576; j++) 
-				dataSets[i].put(k, j, (float)data0.get(0, j)/(float)100);
-	
-		}
+			
+				
+      	  	data0=fd0.get1DHistogram(depthData1, 0, 0);
+      		data1=fd1.get1DHistogram(depthData2, 0, 0);
+    
+    	
+    	
+      		for (int j = 0; j < DATSIZE; j++) {
+				dataSets[0].put(0, j, (float)data0.get(0, j));
+      	  		dataSets[0].put(1, j, (float)data1.get(0, j));
+      	  }
+      		for (int j = 0; j < DATSIZE; j++)
+				dataTest.put(0, j, (float)data0.get(0, j));
+      	  		
+      		
+      	System.out.println(i);	
+		classifier.trainSVM(dataSets[0], i);
+		classifier.classifySVM(dataTest);
 		
 		
 		}
-		for (int i = 0; i < 2; i++) {
-			classifier.trainSVM(dataSets[i], 0);
-			//classifier.trainBOOST(dataSets[i], 0);
-		}
 		
+		System.out.println("done");
+		
+		cvReleaseMat(data0);
+		cvReleaseMat(data1);
 	}
 	
 	
@@ -432,7 +451,7 @@ public class main {
 		        	  
 		        	  CvMat data0=fd0.get1DHistogram(captureArr, 0, 1);
 		        	  
-		        	  for (int i = 0; i < 576; i++) 
+		        	  for (int i = 0; i < DATSIZE; i++) 
 						data.put(0, i, data0.get(0, i));
 					
 		        	
@@ -442,7 +461,7 @@ public class main {
 		        	  FeatureDescriptor fd1 = new FeatureDescriptor();
 		        	  CvMat data1=fd1.get1DHistogram(captureArr, 0, 1);
 		        	  
-		        	  for (int i = 0; i < 576; i++) 
+		        	  for (int i = 0; i < DATSIZE; i++) 
 							data.put(1, i, data1.get(0, i));
 						
 		        	  break;
@@ -451,7 +470,7 @@ public class main {
 		        	  FeatureDescriptor fd2 = new FeatureDescriptor();
 		        	  CvMat data2=fd2.get1DHistogram(captureArr, 0, 1);
 		        	  
-		        	  for (int i = 0; i < 576; i++) 
+		        	  for (int i = 0; i < DATSIZE; i++) 
 							data.put(2, i, data2.get(0, i));
 						
 		        	  break;
@@ -465,12 +484,12 @@ public class main {
 		        
 		          case 'n':
 		        	  Chkmatch=false;
-		        	  caputureBoxImage(DepthMap,capture,0);
-		        	  FeatureDescriptor fd3 = new FeatureDescriptor();
-		        	 
-		        	  CvMat data3=fd3.get1DHistogram(captureArr, 0, 1);
-		        
-		        	 classifier.classifySVM(data3);
+//		        	  caputureBoxImage(DepthMap,capture,0);
+//		        	  FeatureDescriptor fd3 = new FeatureDescriptor();
+//		        	 
+//		        	  CvMat data3=fd3.get1DHistogram(captureArr, 0, 1);
+//		        
+		        	 classifier.classifySVM(dataSets[0]);
 		        	// classifier.classifyBOOST(data3);
 		        	  break;
 		         
@@ -693,17 +712,17 @@ public class main {
         
         	//testSet_init();
 	      // makeTestSet();
-	       // loadTestSet("hand1.dat",90,90,0);
-	       loadTestSet("hand2.dat",90,90,1);
+	        loadTestSet("hand1.dat",90,90,0);
+	       //loadTestSet("hand2.dat",90,90,1);
 	      // loadTestSet("hand3.dat",90,90,2);
 	       //loadTestSet("hand4.dat",90,90,3);
         	
-        	//loadTestSets();
+        	//loadTestSets(2,80);
         	//loadTestSets();
         	//loadTestSets();
         	//loadTestSets();
         	
-        	realTimeShow();
+        	//realTimeShow();
         	
         	//classifier.testCode();
         	

@@ -40,7 +40,7 @@ public class FeatureDescriptor {
 	private static double[][][] HistogramXY;
 	private static double[][][] HistogramYZ;
 	private static double[][][] HistogramXZ;
-	
+	private static CvMat vectorXY,vectorXZ,vectorYZ;
 	
 	public FeatureDescriptor()
 	{
@@ -173,9 +173,9 @@ public class FeatureDescriptor {
 		BinNumYZ= new double[3];
 		BinNumXZ= new double[3];
 		
-		for (int j = 1; j < HEIGHT-1; j++) 
-			for (int k = 1; k < WIDTH-1; k++)
-			 {
+	for (int j = 1; j < HEIGHT-1; j++) 
+		for (int k = 1; k < WIDTH-1; k++)
+		{
 				int i = k+j*WIDTH;
 				
 			
@@ -217,6 +217,11 @@ public class FeatureDescriptor {
 			HistogramXZ[idx_ANGLE][idx_RADIUS][(int) BinNumXZ[0]]+=weightsXZ[0]*WEIGHTSCALE;
 			HistogramXZ[idx_ANGLE][idx_RADIUS][(int) BinNumXZ[1]]+=weightsXZ[1]*WEIGHTSCALE;
 			}
+			
+			cvReleaseMat(ProjectedNormXZ);
+			cvReleaseMat(ProjectedNormXY);
+			cvReleaseMat(ProjectedNormYZ);
+			
 			
 		}
 				
@@ -390,6 +395,7 @@ public class FeatureDescriptor {
 					CvMat mat=cvCreateMat(3, 1, CV_32FC1);
 					cvSetZero(mat);
 					NormMatArr[i+j*WIDTH]=mat;
+					cvReleaseMat(mat);
 					continue;
 					
 				}
@@ -426,6 +432,10 @@ public class FeatureDescriptor {
 		
 				NormMatArr[i+j*WIDTH]=PlaneNorm;
 				
+				cvReleaseMat(pt0);
+				cvReleaseMat(pt1);
+				cvReleaseMat(pt2);
+				cvReleaseMat(pt3);
 //			
 			}
 			 
@@ -473,10 +483,15 @@ public class FeatureDescriptor {
 	}
 	private CvMat getProjectVector(CvMat norm, int mode)
 	{
+		
+
+		vectorXY =cvCreateMat(3,1,CV_32FC1);
+		vectorYZ =cvCreateMat(3,1,CV_32FC1);
+		vectorXZ =cvCreateMat(3,1,CV_32FC1);
+		
 		switch(mode)
 		{
 		case PROJECTED_NORM_XY:
-			CvMat vectorXY =cvCreateMat(3,1,CV_32FC1);
 			
 			vectorXY.put(0, 0, norm.get(0,0));
 			vectorXY.put(1, 0, norm.get(1,0));
@@ -485,7 +500,7 @@ public class FeatureDescriptor {
 			return vectorXY;
 			
 		case PROJECTED_NORM_YZ:
-			CvMat vectorYZ =cvCreateMat(3,1,CV_32FC1);
+		
 			
 			vectorYZ.put(0, 0, 0);
 			vectorYZ.put(1, 0, norm.get(1,0));
@@ -495,7 +510,7 @@ public class FeatureDescriptor {
 			
 			
 		case PROJECTED_NORM_XZ:
-			CvMat vectorXZ =cvCreateMat(3,1,CV_32FC1);
+			
 			
 			vectorXZ.put(0, 0, norm.get(0,0));
 			vectorXZ.put(1, 0, 0);
