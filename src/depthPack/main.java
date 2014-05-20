@@ -170,7 +170,7 @@ public class main {
 		tsMkr= new TestSetMaker();
 		
 		testSets = new TestSetMaker();
-		testSets.createTestFile("hand4.dat");
+		testSets.createTestFile("hand3.dat");
 		testSets.recordReady(90, 90	);
 	}
 	
@@ -238,7 +238,7 @@ public class main {
       	 {
 			depthData=ts1.loadTestFrameSet();
 			
-       		depthData=Smoothing(depthData, CaputureBox_WIDTH, CaputureBox_HEIGHT);
+       		depthData=Smoothing(img,depthData, CaputureBox_WIDTH, CaputureBox_HEIGHT);
 			
       	    data0=fd0.get1DHistogram(depthData, 0, 1);
       	  
@@ -262,7 +262,7 @@ public class main {
 			
 			depthData=ts2.loadTestFrameSet();
 			
-       		depthData=Smoothing(depthData, CaputureBox_WIDTH, CaputureBox_HEIGHT);
+       		depthData=Smoothing(img,depthData, CaputureBox_WIDTH, CaputureBox_HEIGHT);
 			
 			data0=fd0.get1DHistogram(depthData, 0, 1);
     
@@ -312,11 +312,7 @@ public class main {
       		 break;
       	 }
       	 
-//			  pt= new ShortPointer(depthData);
-//	          mat = cvMat(height, width, CV_16UC1, pt);
-//	          cvConvert(mat, result);
-      	 
-	          result= cvt.CvtArr2Img(depthData, width, height);
+	          result= cvt.CvtArr2Img(img,depthData, width, height);
         	  cvNot(result, result);
         	  cvPutText(result, "Cnt:"+n++ , cvPoint(10, 	20), font, CV_RGB(0,0,255));	
         	  cvShowImage("depth", result);
@@ -349,14 +345,8 @@ public class main {
 			
 			depthData1=ts1.loadTestFrameSet();
 					depthData2=ts2.loadTestFrameSet();
-//			if(()==null||()==null)
-//				{
-//					//System.out.println("done");
-//					ts1.loadFinish();
-//					ts2.loadFinish();
-//					break;
-//				}
-			img=cvt.CvtArr2Img(depthData1,CaputureBox_WIDTH,CaputureBox_HEIGHT);
+
+			img=cvt.CvtArr2Img(img,depthData1,CaputureBox_WIDTH,CaputureBox_HEIGHT);
 			
 			cvSmooth(img, img, CV_GAUSSIAN, 3);
 			depthData1= cvt.CvtImg2Arr(img);
@@ -364,7 +354,7 @@ public class main {
 				
       	  	data0=fd0.get1DHistogram(depthData1, 0, 0);
       	  	
-      	  	img=cvt.CvtArr2Img(depthData2,CaputureBox_WIDTH,CaputureBox_HEIGHT);
+      	  	img=cvt.CvtArr2Img(img,depthData2,CaputureBox_WIDTH,CaputureBox_HEIGHT);
 			
 			cvSmooth(img, img, CV_GAUSSIAN, 3);
 			depthData2= cvt.CvtImg2Arr(img);
@@ -408,7 +398,7 @@ public class main {
 		for (int i = 0; i < 90; i++) {
 			depthData1=ts1.loadTestFrameSet();
 			
-			img=cvt.CvtArr2Img(depthData1,CaputureBox_WIDTH,CaputureBox_HEIGHT);
+			img=cvt.CvtArr2Img(img,depthData1,CaputureBox_WIDTH,CaputureBox_HEIGHT);
 			
 			cvSmooth(img, img, CV_GAUSSIAN, 3);
 			depthData1= cvt.CvtImg2Arr(img);
@@ -458,9 +448,9 @@ public class main {
 		
 		return index;
 	}
-	public static short[] Smoothing(short[] depthData,int width, int height)
+	public static short[] Smoothing(IplImage img,short[] depthData,int width, int height)
 	{
-		img=cvt.CvtArr2Img(depthData,width,height);
+		img=cvt.CvtArr2Img(img,depthData,width,height);
 		
 		cvSmooth(img, img, CV_GAUSSIAN, 3);
 		depthData= cvt.CvtImg2Arr(img);
@@ -509,10 +499,10 @@ public class main {
 	        		   
 	        		
 	        	
-	           		DepthMap_R= cvt.CvtArr2Img(depthmap_R,320,240);
-	           		DepthMap_G= cvt.CvtArr2Img(depthmap_G,320,240);
-	           		DepthMap_B= cvt.CvtArr2Img(depthmap_B,320,240);
-	           		DepthMap= cvt.CvtArr2Img(depthmap_V,320,240);
+	           		DepthMap_R= cvt.CvtArr2Img(DepthMap_R,depthmap_R,320,240);
+	           		DepthMap_G= cvt.CvtArr2Img(DepthMap_G,depthmap_G,320,240);
+	           		DepthMap_B= cvt.CvtArr2Img(DepthMap_B,depthmap_B,320,240);
+	           		DepthMap= cvt.CvtArr2Img(DepthMap,depthmap_V,320,240);
 	           		
 
 	           		cvNot(DepthMap, DepthMap);	
@@ -557,9 +547,9 @@ public class main {
 		        	  caputureBoxImage(DepthMap,capture,0);
 		        	  FeatureDescriptor fd3 = new FeatureDescriptor();
 		        	  
-		        	   img=cvt.CvtArr2Img(captureArr,90,90);
-		  			   cvSmooth(img, img, CV_GAUSSIAN, 3);
-		  			   captureArr= cvt.CvtImg2Arr(img);
+		        	  
+		        	   
+		  			   captureArr= Smoothing(img,captureArr, CaputureBox_WIDTH, CaputureBox_HEIGHT);
 		  				
 		        	  CvMat data3=fd3.get1DHistogram(captureArr, 0, 1);
 		        	  

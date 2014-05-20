@@ -72,7 +72,7 @@ public class FeatureDescriptor {
 					HistogramXZ[i][j][j2]=0;
 				}
 			}
-		hist= cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 3);
+		
 		
 	}
 	public static void init()
@@ -121,7 +121,7 @@ public class FeatureDescriptor {
 	}
 	private void showHIST()
 	{
-
+		hist= cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 3);
 		cvSetZero(hist);
 		
 		
