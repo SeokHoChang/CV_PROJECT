@@ -10,7 +10,7 @@ import com.googlecode.javacv.cpp.opencv_ml.CvSVMParams;
 import static com.googlecode.javacv.cpp.opencv_core.*;
 
 public class Classifier {
-	private static final int DATSIZE = 320;
+	private static final int DATSIZE = 576;
 	
 	private static CvSVM svm;
 	private static CvBoost boost;
@@ -20,29 +20,29 @@ public class Classifier {
 	public Classifier()
 	{
 		
-	  initBOOST();
+	 // initBOOST();
 	  initSVM();
 		
 	}
 	public void initSVM()
 	{
 		svm = new CvSVM();
-		CvTermCriteria criteria = cvTermCriteria (CV_TERMCRIT_EPS, 100, 1e-6);
+		CvTermCriteria criteria = cvTermCriteria (CV_TERMCRIT_EPS, 1000, 1e-6);
 		
 		param_svm 
 		= new CvSVMParams();
 		param_svm.svm_type(CvSVM.C_SVC);
-		param_svm.kernel_type(CvSVM.RBF);
+		param_svm.kernel_type(CvSVM.LINEAR);
 		param_svm.degree(9);
 		param_svm.gamma(8);
 		param_svm.coef0(0);
-		param_svm.C(10);
-		param_svm.nu(0.8);
+		param_svm.C(100);
+		param_svm.nu(0.9);
 		param_svm.p(0);
 		param_svm.class_weights(null);
 		param_svm.term_crit(criteria);
 		
-		temp= cvCreateMat(2, 576, CV_32FC1);
+		temp= cvCreateMat(2, DATSIZE, CV_32FC1);
 		temp_cls=cvCreateMat(2, 1, CV_32SC1);
 	}
 	public void initBOOST()
@@ -56,6 +56,10 @@ public class Classifier {
 		param_boost.use_surrogates(false);
 		param_boost.priors(null);
 		param_boost.split_criteria(CvBoost.DEFAULT);
+	}
+	public static CvSVM getSVM()
+	{
+		return svm;
 	}
 	
 	public void trainBOOST(CvMat Data,int i)
@@ -80,37 +84,42 @@ public class Classifier {
 		temp.put(Data);
 		System.out.println(boost.predict(temp, null,null, null, false, false));
 	}
-	public void trainSVM(CvMat Data,int i)
+	public void trainSVM(CvMat Data,int EntrySize,int classnum)
 	{
 		
-		CvMat temp= cvCreateMat(2, DATSIZE, CV_32FC1);
 		
-		temp.put(Data);
+		CvMat temp_cls=cvCreateMat(EntrySize, 1, CV_32SC1);
 		
-		CvMat temp_cls=cvCreateMat(2, 1, CV_32SC1);
-		temp_cls.put(0, 0,13);
-		temp_cls.put(1, 0,14);
+		for (int j = 0; j < EntrySize; j++) {
+			if(j<EntrySize/2)
+				temp_cls.put(j, 0,classnum);
+			else
+				temp_cls.put(j, 0,-1);
+				
+		}
 		
-		 svm.train(temp, temp_cls, null, null, param_svm);
-		 svm.save("SVM_TRAINED.dat", "_0218");
-		 
+		 svm.train(Data, temp_cls, null, null, param_svm);
+		
 		 cvReleaseMat(temp);
 		 cvReleaseMat(temp_cls);
 		 
 	}
-	public void classifySVM(CvMat Data)
+	public float classifySVM(CvMat Data)
 	{
 		CvMat temp= cvCreateMat(1, DATSIZE, CV_32FC1);
 		
 		 for (int i = 0; i < DATSIZE; i++) 
-			 temp.put(0,i,(float)temp.get(0, i));
+			 temp.put(0,i,(float)Data.get(0, i));
 		 
 		 
-		System.out.println(svm.predict(Data,false));
+		float response=svm.predict(temp,false);
+		
+		return response;
 	}
 	
 	public void testCode()
 	{
+		
 		IplImage img = cvCreateImage(cvSize(1000, 1000), IPL_DEPTH_8U, 3);
 		cvZero(img);
 		
@@ -125,16 +134,30 @@ public class Classifier {
 			float x = (int) (Math.random()*1000);
 			float y = (int) (Math.random()*1000);
 			
+			
+			System.out.println("<"+x/width+" , "+y/height+">");
+			
+			int c = (y > 200*Math.cos(x*3.14/300) + 400) ? ((x > 600) ? 0 : 1) : ((x > 400) ? 2 : 3);
+			
+			if(c==1){
 			train_data.put(i,0,x/width);
 			train_data.put(i,1,y/height);
-			int c = (y > 200*Math.cos(x*3.14/300) + 400) ? ((x > 600) ? 0 : 1) : ((x > 400) ? 2 : 3);
-			//int c = (y>Math.pow(x, 2))?0:1;
-			train_class.put(i, 0, c);
+			train_class.put(i, 0, 1);	
 			
+			}
+			else 
+			{
+				train_data.put(i,0,x/width);
+				train_data.put(i,1,y/height);
+				train_class.put(i, 0, 0);		
+			}
 		
 		}
-		
 		svm.train(train_data, train_class, null,null, param_svm);
+			
+
+	
+		System.out.println("here");
 		
 		for (int x=0; x<img.width(); x++) {
 			for (int y=0; y<img.height(); y++) {
@@ -142,7 +165,8 @@ public class Classifier {
 				sample.put(0, 0,(float)x/width);
 				sample.put(0, 1,(float)y/height);
 				
-				float response = svm.predict(sample, true);
+				float response = svm.predict(sample, false);
+				//System.out.println("response"+response);
 				
 				if(response==0)
 					cvSet2D(img, y, x, cvScalar(180, 0, 0, 0));
@@ -152,6 +176,7 @@ public class Classifier {
 					cvSet2D(img, y, x, cvScalar(0, 0, 255, 0));
 				else if(response==3)
 					cvSet2D(img, y, x, cvScalar(180, 0, 180, 0));
+				
 					
 				
 				
@@ -163,7 +188,7 @@ public class Classifier {
 		int y = (int) Math.round(train_data.get(i, 1)*height);
 		int c = (int) Math.round(train_class.get(i, 0));
 		
-		if(c==0)
+		if(c==1)
 			cvCircle(img, cvPoint(x, y), 2, cvScalar(0, 0, 0, 0), 0, 1, 1);
 		else
 			cvCircle(img, cvPoint(x, y), 2, cvScalar(255, 255,255, 0), 0, 1, 1);
@@ -172,7 +197,7 @@ public class Classifier {
 		
 		cvShowImage("result", img);
 	
-		cvWaitKey(10000	);
+		cvWaitKey(100000);
 		
 	}
 }

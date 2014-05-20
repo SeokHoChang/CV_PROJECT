@@ -41,14 +41,13 @@ public class FeatureDescriptor {
 	private static double[][][] HistogramYZ;
 	private static double[][][] HistogramXZ;
 	private static CvMat vectorXY,vectorXZ,vectorYZ;
-	
+	private static IplImage hist;
 	public FeatureDescriptor()
 	{
-		data= cvCreateMat(1,TRAINING_MAT_SIZE , CV_32FC1);
-		cvSetZero(data);
-		for (int i = 0; i < TRAINING_MAT_SIZE; i++) {
-			data.put(0, i, 0);
-		}
+		
+		
+				
+	
 		
 		NormMatArr= new CvMat[MAT_ARRAY_SIZE];
 		for (int i = 0; i < NormMatArr.length; i++) {
@@ -73,16 +72,45 @@ public class FeatureDescriptor {
 					HistogramXZ[i][j][j2]=0;
 				}
 			}
-		
+		hist= cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 3);
 		
 	}
+	public static void init()
+	{
+		
+		data= cvCreateMat(1,TRAINING_MAT_SIZE , CV_32FC1);
+		
+		for (int i = 0; i < TRAINING_MAT_SIZE; i++) {
+			data.put(0, i, 0);
+		}
+		
+		
+		
+		for (int i = 0; i < NormMatArr.length; i++) {
+			
+			cvSetZero(NormMatArr[i]);
+			
+		}
+		for(int i=0;i<ANGLE_BIN_SIZE;i++)
+			for (int j = 0; j < RADIUS_BIN_SIZE; j++) {
+				for (int j2 = 0; j2 < GRAD_BIN_SIZE_XY; j2++) {
+					HistogramXY[i][j][j2]=0;
+				}
+				for (int j2 = 0; j2 < GRAD_BIN_SIZE_YZ; j2++) {
+					HistogramYZ[i][j][j2]=0;
+				}
+				for (int j2 = 0; j2 < GRAD_BIN_SIZE_XZ; j2++) {
+					HistogramXZ[i][j][j2]=0;
+				}
+			}
+		
+	}
+
 	
 	public CvMat get1DHistogram(short[] DepthMap,int p , int l)
 	{
-//		for (int i = 0; i < DepthMap.length; i++) {
-//			System.out.println(DepthMap[i]);
-//		}
-		
+	
+		init();
 		makeNormMatArr(DepthMap);
 		fillHIST(NormMatArr);
 		makeHistTo1DMat();
@@ -93,7 +121,7 @@ public class FeatureDescriptor {
 	}
 	private void showHIST()
 	{
-		IplImage hist = cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 3);
+
 		cvSetZero(hist);
 		
 		
@@ -130,8 +158,7 @@ public class FeatureDescriptor {
 	
 	private void makeHistTo1DMat()
 	{
-		//for (int i = 0; i < TRAINING_MAT_SIZE; i++) 
-			//System.out.println(data.get(0, i));
+	
 			
 		int idx=0;
 	for (int cnt = 0; cnt < 3; cnt++) 
@@ -195,13 +222,13 @@ public class FeatureDescriptor {
 			 
 			int idx_ANGLE,idx_RADIUS;
 			if((idx_ANGLE= getAngleBin(k,j))==-1){
-				//System.out.println("(x,y)= ("+k+","+j+")");
+				
 				continue;
 			}
 			
 			if((idx_RADIUS= getRadiusBin(k,j))==-1)
 			{
-				//System.out.println("(x,y)= ("+k+","+j+")");
+				
 				continue;
 			}
 			
@@ -274,11 +301,7 @@ public class FeatureDescriptor {
 		theta[0]=angle-ANGLE_SIZE*num_bin0;
 		theta[1]=ANGLE_SIZE*num_bin1-angle;
 		
-//		System.out.println("ANGLE: "+angle);
-//		System.out.println("BIN: "+num_bin0+" , "+num_bin1);
-//		System.out.println("THETA: "+theta[0]+" , "+theta[1]);
-//		System.out.println("SINE: "+Math.sin((theta[0]/(double)180)*Math.PI)+" , "+Math.sin((theta[1]/(double)180)*Math.PI));
-//		
+	
 		double[] weights= new double[2];
 		
 		
@@ -295,13 +318,7 @@ public class FeatureDescriptor {
 				System.exit(1);
 			}
 		
-//			System.out.println("binNUM:"+num_bin0);
-//			System.out.println("weight:"+weights[0]);
-//			
-//			System.out.println("binNUM:"+num_bin1);
-//			System.out.println("weight:"+weights[1]);
-//			
-			
+	
 		return weights;
 		
 	}
@@ -426,7 +443,7 @@ public class FeatureDescriptor {
 				pt2.put(2, 0, depthMap[(i-1)+j*WIDTH]);//left
 				pt3.put(2, 0, depthMap[(i+1)+j*WIDTH]);//right
 				
-				//System.out.println(i+j*WIDTH);
+			
 				CvMat PlaneNorm = getFittedPlaneNorm(pt0, pt1, pt2, pt3);
 				
 		
@@ -461,13 +478,7 @@ public class FeatureDescriptor {
 		
 		
 		cvCrossProduct(v1, v2, normal);
-//		System.out.println("v1 : ("+v1.get(0, 0)+", " +v1.get(0, 1)+", "+v1.get(0, 2)+")");
-//		System.out.println("v2 : ("+v2.get(0, 0)+", " +v2.get(0, 1)+", "+v2.get(0, 2)+")");
-//		
-//		
-//		System.out.println("normal : ("+normal.get(0, 0)+", " +normal.get(0, 1)+", "+normal.get(0, 2)+")");
-//		
-		
+
 		if(normal.get(2, 0)<0){
 			
 			normal.put(0, 0, normal.get(0, 0)*(-1));
