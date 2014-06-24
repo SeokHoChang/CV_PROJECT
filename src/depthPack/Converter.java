@@ -13,14 +13,12 @@ public class Converter {
 	
 	public Converter()
 	{
-
-     	
-	
+		//nothing happen
  
 	}
 	public IplImage CvtArr2Img(IplImage DepthMap,short[] depthArr,int width, int height)
 	{
-//		DepthMap = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
+
 		Pointer depth_pt= new ShortPointer(depthArr);
         CvMat depth_mat = cvMat(height, width, CV_16UC1,depth_pt);
         cvConvert(depth_mat, DepthMap);

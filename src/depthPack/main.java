@@ -48,7 +48,7 @@ public class main {
 
 	private static final int SVMSIZE = 4;
 	
-	private static final int MATSIZE = 320*240;
+	public static final int MATSIZE = 320*240;
 	
 	private static final int DATSIZE = 576;
 	
@@ -61,8 +61,8 @@ public class main {
 	 
 	private static final int CaputureBox_X=10;
 	private static final int CaputureBox_Y=10;
-	private static final int CaputureBox_WIDTH=90;
-	private static final int CaputureBox_HEIGHT=90;
+	public static final int CaputureBox_WIDTH=90;
+	public static final int CaputureBox_HEIGHT=90;
 	private static final int CaputureBox_MAT_SIZE=90*90;
 
 	public static int cnt=0;
@@ -92,6 +92,11 @@ public class main {
 	
 	private static CvSVM[] SVMs;
 	
+	
+	//captureBox location
+	private static int x=10,y=10;
+	private static int ClosestX=0,ClosestY=0;
+	private static double MIN_DIST_VAL=0;
 	
 	public static void init()
 	{
@@ -170,7 +175,7 @@ public class main {
 		tsMkr= new TestSetMaker();
 		
 		testSets = new TestSetMaker();
-		testSets.createTestFile("hand3.dat");
+		testSets.createTestFile("hand4.dat");
 		testSets.recordReady(90, 90	);
 	}
 	
@@ -196,16 +201,13 @@ public class main {
 			}
 	           
 	            ts.recordTestFrameSet(depthmap_V,320,240);
-	           	  Pointer pt= new ShortPointer(depthmap_V);
-		          CvMat mat = cvMat(240, 320, CV_16UC1, pt);
-		          cvConvert(mat, DepthMap);
-		   
-		          cvNot(DepthMap, DepthMap);	          
-		          cvShowImage("depth", DepthMap);
-		        
-	       
-		            pp.ReleaseFrame();
-		           cvWaitKey(10);
+	            
+	            DepthMap=cvt.CvtArr2Img(DepthMap, depthmap_V, 320, 240);
+	            cvNot(DepthMap, DepthMap);	          
+		        cvShowImage("depth", DepthMap);
+		      
+		        pp.ReleaseFrame();
+		         cvWaitKey(10);
 		   }
 		ts.recordFinish();
 		   
@@ -427,24 +429,27 @@ public class main {
 	
 	public static int matchHand(CvMat data)
 	{
-		int index=-1;
-			
-		int cnt=0;
-		
+		MIN_DIST_VAL=1000;
+		int index=-1;		
+		float minDist=100;
+		float dist=0;
 		
 		for (int i = 0; i < SVMSIZE; i++) {
-			
-			if(SVMs[i].predict(data, false)!=-1)
+			//System.out.println(i+" svm:"+SVMs[i].predict(data, true));
+			if((dist=SVMs[i].predict(data, true))<minDist)
 				{
 					cnt++;
+					minDist=dist;
 					index=i;
-				}
-			
+				}			
 		}
-		if(cnt!=1 || cnt ==0){
+		
+		if(minDist>=0){
 			index=-1;
 			//System.out.println(cnt+" duplicate hand");
 		}
+		else
+		MIN_DIST_VAL=minDist;
 		
 		return index;
 	}
@@ -456,6 +461,127 @@ public class main {
 		depthData= cvt.CvtImg2Arr(img);
 		return depthData;
 	}
+	public static void drawCaputeBox(int x, int y)
+	{
+		
+		cvDrawCircle(DepthMap_3C,cvPoint(ClosestX, ClosestY),3 , cvScalar(255,255, 255, 0), 2,1, 0);
+        
+		   	  cvDrawRect(DepthMap_3C,cvPoint(x, y),cvPoint(90+x,90+y), cvScalar(0,255, 0, 0), 2,0, 0);
+	          cvDrawCircle(DepthMap_3C,cvPoint(45+x, 45+y),2 , cvScalar(0,255, 0, 0), 2,0, 0);
+	          
+	          cvDrawCircle(DepthMap_3C,cvPoint(45+x, 45+y),36, cvScalar(0,255, 0, 0), 1,0, 0);
+	          cvDrawCircle(DepthMap_3C,cvPoint(45+x, 45+y),27, cvScalar(0,255, 0, 0), 1,0, 0);
+	          cvDrawCircle(DepthMap_3C,cvPoint(45+x, 45+y),18, cvScalar(0,255, 0, 0), 1,0, 0);
+	          cvDrawCircle(DepthMap_3C,cvPoint(45+x, 45+y), 9, cvScalar(0,255, 0, 0), 1,0, 0);
+	          for (int i = 0; i < 8; i++) {
+				
+	        	  cvLine(DepthMap_3C, cvPoint(45+x,45+y), cvPoint((int)(36*Math.cos((i*45/180.0)*Math.PI))+45+x,(int)(36*Math.sin((i*45/180.0)*Math.PI))+45+y), cvScalar(0,255, 0, 0),1, 0, 0);
+			}
+	          
+	}
+	
+	public static void slidingWindow(int ClosestX, int ClosestY)
+	{
+		 boolean found =false;
+    	 short[] hand = new short[90*90]; 
+    	 HandFinder hf = new HandFinder();
+    	 CvMat handDat = null;
+    	FeatureDescriptor fd = new FeatureDescriptor();
+
+    	int startX =(ClosestX-90)<0?0:ClosestX-90;
+    	int startY =(ClosestY-90)<0?0:ClosestY-90;
+    	int finishX = (ClosestX+45)>319?319:ClosestX+45;
+    	int finishY = (ClosestY+45)>239?239:ClosestY+45;
+    	int handNum=-1;
+    	double distVal=1000;
+    	int finalHandNum=-1;
+    	
+    	for (int i = startX; i < ClosestX; i+=15) {
+    		for (int j = startY; j < ClosestY; j+=15) {
+				
+//    			hand=hf.FindHandSW(DepthMap, i, j,depthmap_V);
+//    			
+//    			cvShowImage("handFinding", hf.getImg());
+//    		    handDat=fd.get1DHistogram(hand, 0, 1);
+//    		    dataTest=correctNAN(handDat, dataTest);
+//    		    cvWaitKey(1);
+//    		    
+    			  caputureBoxImage(DepthMap,capture,i,j,0);
+	        	
+	  			  captureArr= Smoothing(img,captureArr, CaputureBox_WIDTH, CaputureBox_HEIGHT);
+	  				
+	        	  handDat=fd.get1DHistogram(captureArr, 0, 0);
+	        	  
+	        	  dataTest=correctNAN(handDat, dataTest);
+	        	 
+	        	  cvWaitKey(1);
+	        	  
+    		if((handNum=matchHand(dataTest))!=-1){
+    			
+    			if(distVal>MIN_DIST_VAL){
+    				distVal=MIN_DIST_VAL;
+    			finalHandNum=handNum;
+    			x=i;
+    			y=j;
+    			cvShowImage("handFound", capture);
+    			}
+    		}
+
+		}
+		
+    	}
+    	System.out.println(finalHandNum+":"+x+","+y);	
+			cvReleaseMat(handDat);	
+		
+//    	if(found!=true)
+//    		System.out.println("can't find");
+    	
+	}
+	
+	public static CvMat correctNAN(CvMat data,CvMat dataTest)
+	{
+		 for (int j = 0; j < DATSIZE; j++) {
+ 			
+				dataTest.put(0, j, (float)data.get(0, j));
+				
+				if(!(dataTest.get(0, j)>=0)){
+					
+					dataTest.put(0, j, 0);
+				}
+				
+				}
+     	  return dataTest;
+	}
+	
+	
+	public static short[] findMostCloseArea(short[] depthMap)
+	{
+		int ClosestValue= 1000;
+		int ClosestIdx=-1;
+		for (int i = 0; i < depthMap.length; i++) {
+		
+			if(depthMap[i]<ClosestValue){
+				ClosestValue=depthMap[i];
+				ClosestIdx=i;
+			}
+		}
+		
+		ClosestX= ClosestIdx%320;
+		ClosestY= ClosestIdx/320;
+		
+	//System.out.println("closest: "+ClosestX+"," +ClosestY);
+	
+//		int min=ClosestValue;
+//		int max=min+45;
+//		
+//		for (int i = 0; i < depthMap.length; i++) {
+//			if(!(depthMap[i]<max&&depthMap[i]>min))
+//				depthMap[i]=255;		
+//		}
+		return depthMap;
+		
+	}
+	
 	public static void realTimeShow()
 	{
 		CvCapture cap1 = cvCreateCameraCapture(0);
@@ -489,20 +615,18 @@ public class main {
 						depthmap_G[i]=(short) (depthmap_V[i]/(double)200*255);
 					else if(200<depthmap_V[i]&&depthmap_V[i]<255)
 						depthmap_B[i]=(short) (depthmap_V[i]/(double)255*255);
-					
+	
 					}
 				else
 					depthmap_V[i]=255;
 			}
 	           
 	         
-	        		   
-	        		
 	        	
 	           		DepthMap_R= cvt.CvtArr2Img(DepthMap_R,depthmap_R,320,240);
 	           		DepthMap_G= cvt.CvtArr2Img(DepthMap_G,depthmap_G,320,240);
 	           		DepthMap_B= cvt.CvtArr2Img(DepthMap_B,depthmap_B,320,240);
-	           		DepthMap= cvt.CvtArr2Img(DepthMap,depthmap_V,320,240);
+	           		DepthMap= cvt.CvtArr2Img(DepthMap,findMostCloseArea(depthmap_V),320,240);
 	           		
 
 	           		cvNot(DepthMap, DepthMap);	
@@ -510,29 +634,16 @@ public class main {
 		         
 		          cvMerge(DepthMap_B, DepthMap_G,DepthMap_R, null, DepthMap_3C);
 		     
-		          if(Chkmatch==true){
-		      
-		          }
+		         
 		        
-		          cvDrawRect(DepthMap_3C,cvPoint(10, 10),cvPoint(100,100), cvScalar(0,255, 0, 0), 2,0, 0);
-		          cvDrawCircle(DepthMap_3C,cvPoint(55, 55),2 , cvScalar(0,255, 0, 0), 2,0, 0);
-		          
-		          cvDrawCircle(DepthMap_3C,cvPoint(55, 55),36, cvScalar(0,255, 0, 0), 1,0, 0);
-		          cvDrawCircle(DepthMap_3C,cvPoint(55, 55),27, cvScalar(0,255, 0, 0), 1,0, 0);
-		          cvDrawCircle(DepthMap_3C,cvPoint(55, 55),18, cvScalar(0,255, 0, 0), 1,0, 0);
-		          cvDrawCircle(DepthMap_3C,cvPoint(55, 55), 9, cvScalar(0,255, 0, 0), 1,0, 0);
-		          for (int i = 0; i < 8; i++) {
-					
-		        	  cvLine(DepthMap_3C, cvPoint(55,55), cvPoint((int)(36*Math.cos((i*45/180.0)*Math.PI))+55,(int)(36*Math.sin((i*45/180.0)*Math.PI))+55), cvScalar(0,255, 0, 0),1, 0, 0);
-				}
-		          
+		          drawCaputeBox(x, y);
 	            
 		          switch(cvWaitKey(10))
 		          {
 		          
 		          case 'c':
 		        	  
-		        	  caputureBoxImage(DepthMap,capture,1);
+		        	  caputureBoxImage(DepthMap,capture,x,y,1);
 		        	  System.out.println(cnt++);
 		        	 
 		        	  break;
@@ -544,32 +655,23 @@ public class main {
 		       
 		          case 'n':
 		        	  
-		        	  caputureBoxImage(DepthMap,capture,0);
+		        	  caputureBoxImage(DepthMap,capture,x,y,0);
 		        	  FeatureDescriptor fd3 = new FeatureDescriptor();
 		        	  
-		        	  
-		        	   
-		  			   captureArr= Smoothing(img,captureArr, CaputureBox_WIDTH, CaputureBox_HEIGHT);
+		  			  captureArr= Smoothing(img,captureArr, CaputureBox_WIDTH, CaputureBox_HEIGHT);
 		  				
 		        	  CvMat data3=fd3.get1DHistogram(captureArr, 0, 1);
 		        	  
-		        	  for (int j = 0; j < DATSIZE; j++) {
-		        			
-		  				dataTest.put(0, j, (float)data3.get(0, j));
-		  				
-		  				if(!(dataTest.get(0, j)>=0)){
-		  					
-		  					dataTest.put(0, j, 0);
-		  				}
-		  				
-		  				}
-		        	  
+		        	  dataTest=correctNAN(data3, dataTest);
+		        	 
 		        	  System.out.println(matchHand(dataTest));
-	  	
+		        	
 		        	  break;
 		         
 		          case 'f': 
-	
+		        	 
+		        	 slidingWindow(ClosestX,ClosestY);
+		        	  
 		        	  break;
 		        	  
 		          }
@@ -582,8 +684,10 @@ public class main {
 		          pp.ReleaseFrame();
 		   }
 	}
-	public static void caputureBoxImage(IplImage DepthMap,IplImage capture,int mode)
+	public static void caputureBoxImage(IplImage DepthMap,IplImage capture,int x,int y,int mode)
 	{
+		CaptureBox = cvRect(x, y, CaputureBox_WIDTH, CaputureBox_HEIGHT);
+		ROIBox = cvRect(x, y, CaputureBox_WIDTH, CaputureBox_HEIGHT);
 		
 		cvSetImageROI(DepthMap, CaptureBox);
 		cvCopy(DepthMap, capture);
@@ -597,7 +701,7 @@ public class main {
 		
 		for(int i=0,j=0; i< MATSIZE;i++)
 		{
-			if((i%320)<CaputureBox_WIDTH && (i/320)<CaputureBox_HEIGHT)
+			if((i%320)>=x &&(i%320)<CaputureBox_WIDTH+x && (i/320)>=y &&(i/320)<CaputureBox_HEIGHT+y)
 			{
 				captureArr[j++]=depthmap_V[i];
 			}
