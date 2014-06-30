@@ -6,6 +6,7 @@ import java.awt.Point;
 
 
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
+import com.sun.corba.se.spi.ior.MakeImmutable;
 
 
 
@@ -24,10 +25,15 @@ public class FeatureDescriptor {
 	
 	private static final int TRAINING_MAT_SIZE= ANGLE_BIN_SIZE*RADIUS_BIN_SIZE*(GRAD_BIN_SIZE_XY+GRAD_BIN_SIZE_XZ+GRAD_BIN_SIZE_YZ);
 	
-	private static final int WIDTH=90;
-	private static final int HEIGHT=90;
+	private static final int WIDTH=320;
+	private static final int HEIGHT=240;
 	
-	private static final int MAT_ARRAY_SIZE=WIDTH*HEIGHT;
+	private static final int CAP_WIDTH=90;
+	private static final int CAP_HEIGHT=90;
+	
+	
+	
+	private static final int MAT_ARRAY_SIZE=CAP_WIDTH*CAP_HEIGHT;
 	
 	private static final int PROJECTED_NORM_XY = 0;
 	private static final int PROJECTED_NORM_YZ = 1;
@@ -36,25 +42,17 @@ public class FeatureDescriptor {
 	private static final int MANHATTAN_DISTANCE_MODE = 0;
 
 	private static CvMat data;
-	private static CvMat[] NormMatArr;
+	public static CvMat[] NormMatArr;
 	private static double[][][] HistogramXY;
 	private static double[][][] HistogramYZ;
 	private static double[][][] HistogramXZ;
-	private static CvMat vectorXY,vectorXZ,vectorYZ;
+	
 	private static IplImage hist;
-	public FeatureDescriptor()
+	public  FeatureDescriptor()
 	{
 		
-		
-				
-	
-		
 		NormMatArr= new CvMat[MAT_ARRAY_SIZE];
-		for (int i = 0; i < NormMatArr.length; i++) {
-			NormMatArr[i]= cvCreateMat(3, 1, CV_32FC1);
-			cvSetZero(NormMatArr[i]);
-			
-		}
+		
 		
 		HistogramXY= new double[ANGLE_BIN_SIZE][RADIUS_BIN_SIZE][GRAD_BIN_SIZE_XY];
 		HistogramYZ= new double[ANGLE_BIN_SIZE][RADIUS_BIN_SIZE][GRAD_BIN_SIZE_YZ];
@@ -74,23 +72,28 @@ public class FeatureDescriptor {
 			}
 		
 		
+	
+		data= cvCreateMat(1,TRAINING_MAT_SIZE , CV_32FC1);
+		
+		for (int i = 0; i < MAT_ARRAY_SIZE; i++) {
+			NormMatArr[i]= cvCreateMat(3, 1, CV_32FC1);
+			cvSetZero(NormMatArr[i]);
+			
+		}
+		 
+		
+	
 	}
+	
+	
 	public static void init()
 	{
 		
-		data= cvCreateMat(1,TRAINING_MAT_SIZE , CV_32FC1);
 		
 		for (int i = 0; i < TRAINING_MAT_SIZE; i++) {
 			data.put(0, i, 0);
 		}
 		
-		
-		
-		for (int i = 0; i < NormMatArr.length; i++) {
-			
-			cvSetZero(NormMatArr[i]);
-			
-		}
 		for(int i=0;i<ANGLE_BIN_SIZE;i++)
 			for (int j = 0; j < RADIUS_BIN_SIZE; j++) {
 				for (int j2 = 0; j2 < GRAD_BIN_SIZE_XY; j2++) {
@@ -105,14 +108,20 @@ public class FeatureDescriptor {
 			}
 		
 	}
-
 	
-	public CvMat get1DHistogram(short[] DepthMap,int p , int l)
+	
+	public CvMat MK(short[] depthMap,int x, int y,int width,int height)
 	{
-	
 		init();
-		makeNormMatArr(DepthMap);
-		fillHIST(NormMatArr);
+		makeNormMatArr(depthMap,x,y,width,height);
+		
+		return get1DHistogram(NormMatArr,0, 0, 0);
+	}
+	
+	public CvMat get1DHistogram(CvMat[] NormMatArr,int x, int y,int l)
+	{
+		
+		fillHIST(NormMatArr,x,y);
 		makeHistTo1DMat();
 		
 		if(l==1)
@@ -133,7 +142,7 @@ public class FeatureDescriptor {
 			{ 
 				cvLine(hist,cvPoint(10+i, 0), cvPoint(10+i,(int)Math.round(data.get(0, i))), CV_RGB(0,255,0), 1, CV_AA, 0);
 				
-			continue;
+				continue;
 			}
 			if(i>=ANGLE_BIN_SIZE*RADIUS_BIN_SIZE*GRAD_BIN_SIZE_XY && i<TRAINING_MAT_SIZE-ANGLE_BIN_SIZE*RADIUS_BIN_SIZE*GRAD_BIN_SIZE_XZ)
 				{
@@ -186,29 +195,29 @@ public class FeatureDescriptor {
 					break;
 				}
 				
-				
+				//System.out.println(data.get(0,idx-1));
 			}
 		
 	}
 	
 	
-	private void fillHIST(CvMat[] NormMatArr)
+	private void fillHIST(CvMat[] NormMatArr,int x ,int y)
 	{
 		double[] BinNumXY,BinNumXZ,BinNumYZ;
-	
-		BinNumXY= new double[3];
-		BinNumYZ= new double[3];
-		BinNumXZ= new double[3];
 		
-	for (int j = 1; j < HEIGHT-1; j++) 
-		for (int k = 1; k < WIDTH-1; k++)
+		
+		
+	for (int j = 1; j < CAP_HEIGHT-1; j++) 
+		for (int k = 1; k <CAP_WIDTH-1; k++)
 		{
-				int i = k+j*WIDTH;
-				
+				int i = k+j*CAP_WIDTH;
 			
-			CvMat ProjectedNormXY = getProjectVector(NormMatArr[i], PROJECTED_NORM_XY);
-			CvMat ProjectedNormYZ = getProjectVector(NormMatArr[i], PROJECTED_NORM_YZ);
-			CvMat ProjectedNormXZ = getProjectVector(NormMatArr[i], PROJECTED_NORM_XZ);
+			CvMat ProjectedNormXY = cvCreateMat(3,1,CV_32FC1);
+			ProjectedNormXY = getProjectVector(ProjectedNormXY,NormMatArr[i], PROJECTED_NORM_XY);
+			CvMat ProjectedNormYZ = cvCreateMat(3,1,CV_32FC1);
+			ProjectedNormYZ	= getProjectVector(ProjectedNormYZ,NormMatArr[i], PROJECTED_NORM_YZ);
+			CvMat ProjectedNormXZ = cvCreateMat(3,1,CV_32FC1);
+			ProjectedNormXZ = getProjectVector(ProjectedNormXZ,NormMatArr[i], PROJECTED_NORM_XZ);
 			
 			
 			BinNumXY= getBinNum(ProjectedNormXY, PROJECTED_NORM_XY);
@@ -217,20 +226,34 @@ public class FeatureDescriptor {
 			
 		
 			double[] weightsXY= calcWeight(BinNumXY[0], BinNumXY[1], BinNumXY[2]);
+			
 			double[] weightsYZ= calcWeight(BinNumYZ[0], BinNumYZ[1], BinNumYZ[2]);
+			
 			double[] weightsXZ= calcWeight(BinNumXZ[0], BinNumXZ[1], BinNumXZ[2]);
+		
 			 
+		
+			
+		
 			int idx_ANGLE,idx_RADIUS;
-			if((idx_ANGLE= getAngleBin(k,j))==-1){
+			if((idx_ANGLE= getAngleBin(k,j,x,y))==-1){
 				
+				cvReleaseMat(ProjectedNormXZ);
+				cvReleaseMat(ProjectedNormXY);
+				cvReleaseMat(ProjectedNormYZ);
+		
 				continue;
 			}
 			
-			if((idx_RADIUS= getRadiusBin(k,j))==-1)
+			if((idx_RADIUS= getRadiusBin(k,j,x,y))==-1)
 			{
-				
+				cvReleaseMat(ProjectedNormXZ);
+				cvReleaseMat(ProjectedNormXY);
+				cvReleaseMat(ProjectedNormYZ);
+			
 				continue;
 			}
+			
 			
 			if(!(ProjectedNormXY.get(0, 0)==0 &&ProjectedNormXY.get(0, 1)==0)){
 			HistogramXY[idx_ANGLE][idx_RADIUS][(int) BinNumXY[0]]+=weightsXY[0]*WEIGHTSCALE;
@@ -243,24 +266,27 @@ public class FeatureDescriptor {
 			if(!(ProjectedNormXZ.get(0, 0)==0 &&ProjectedNormXZ.get(0, 1)==0)){
 			HistogramXZ[idx_ANGLE][idx_RADIUS][(int) BinNumXZ[0]]+=weightsXZ[0]*WEIGHTSCALE;
 			HistogramXZ[idx_ANGLE][idx_RADIUS][(int) BinNumXZ[1]]+=weightsXZ[1]*WEIGHTSCALE;
+		
 			}
+			
 			
 			cvReleaseMat(ProjectedNormXZ);
 			cvReleaseMat(ProjectedNormXY);
 			cvReleaseMat(ProjectedNormYZ);
 			
-			
-		}
-				
+	
 		
+		}
+
+	
 	}
 	
-	private int getRadiusBin(int x, int y)
+	private int getRadiusBin(int x, int y,int boxX,int boxY)
 	{
 		
 		
-		double distance=Math.sqrt(Math.pow(x-WIDTH/2,2)+Math.pow(y-HEIGHT/2,2));
-		
+		double distance=Math.sqrt(Math.pow((boxX+CAP_WIDTH/2)-x,2)+Math.pow((boxY+CAP_HEIGHT/2)-y,2));
+//		double distance=Math.sqrt(Math.pow(x-CAP_WIDTH/2,2)+Math.pow(y-CAP_HEIGHT/2,2));
 		for (int i = 0; i < RADIUS_BIN_SIZE; i++) {
 			
 			if(RADIUS/RADIUS_BIN_SIZE*i<=distance && distance<RADIUS/RADIUS_BIN_SIZE *(i+1))
@@ -270,15 +296,17 @@ public class FeatureDescriptor {
 		return -1;
 	}
 	
-	private int getAngleBin(int x, int y)
+	private int getAngleBin(int x, int y,int boxX,int boxY)
 	{
 		
 		
 		double Angle=0;
-		
-			x=x-WIDTH/2;
-			y=y-HEIGHT/2;
-		
+//		
+			x=x-(boxX+CAP_WIDTH/2);
+			y=y-(boxY+CAP_HEIGHT/2);
+//		x=x-CAP_WIDTH/2;
+//		y=y-CAP_HEIGHT/2;
+
 		  if(( Angle=(Math.atan2(y, x)/Math.PI) *180)<0)
 			 Angle=360+Angle;
 		  
@@ -398,32 +426,39 @@ public class FeatureDescriptor {
 		
 		return BinNum;
 	}
-	private void makeNormMatArr(short[] depthMap)
+	private void makeNormMatArr(short[] depthMap,int x,int y,int width,int height)
 	{
-		int imageHeight = HEIGHT;
-		int imageWidth  = WIDTH;
+		int imageHeight = height;
+		int imageWidth  = width;
 		
+		CvMat pt0 = cvCreateMat(3,1,CV_32FC1);
+		CvMat pt1 = cvCreateMat(3,1,CV_32FC1);
+		CvMat pt2 = cvCreateMat(3,1,CV_32FC1);
+		CvMat pt3 = cvCreateMat(3,1,CV_32FC1);
+		CvMat mat = cvCreateMat(3, 1, CV_32FC1);
+		
+		CvMat v1 = cvCreateMat(3,1,CV_32FC1);
+		CvMat v2 = cvCreateMat(3,1,CV_32FC1);
+		CvMat normal = cvCreateMat(3,1,CV_32FC1);
+		
+		
+//		for (int i = (x-CAP_WIDTH)>0?(x-CAP_WIDTH):0; i < ((x+CAP_WIDTH)<imageWidth?(x+CAP_WIDTH):imageWidth); i++) {
+//			for (int j = (y-CAP_HEIGHT)>0?(y-CAP_HEIGHT):0; j < ((y+CAP_HEIGHT)<imageHeight?(y+CAP_HEIGHT):imageHeight); j++) {
+//			
 		
 		for (int i = 0; i < imageWidth; i++) {
 			for (int j = 0; j < imageHeight; j++) {
-				
-				if(i==0 || j==0 || i==WIDTH-1 || j== HEIGHT-1)
+
+				if(i==0 || j==0 || i==imageWidth-1 || j== imageHeight-1)
 				{
-					CvMat mat=cvCreateMat(3, 1, CV_32FC1);
+					
 					cvSetZero(mat);
-					NormMatArr[i+j*WIDTH]=mat;
-					cvReleaseMat(mat);
+					NormMatArr[i+j*imageWidth]=mat;
+					
 					continue;
 					
 				}
 				
-				
-				CvMat pt0 = cvCreateMat(3,1,CV_32FC1);
-				CvMat pt1 = cvCreateMat(3,1,CV_32FC1);
-				CvMat pt2 = cvCreateMat(3,1,CV_32FC1);
-				CvMat pt3 = cvCreateMat(3,1,CV_32FC1);
-				
-//		
 				//dx
 				pt0.put(0, 0, i);//up
 				pt1.put(0, 0, i);//down
@@ -438,35 +473,43 @@ public class FeatureDescriptor {
 				pt3.put(1, 0, j);//right
 				
 				//dz
-				pt0.put(2, 0, depthMap[i+(j-1)*WIDTH]);//up
-				pt1.put(2, 0, depthMap[i+(j+1)*WIDTH]);//down
-				pt2.put(2, 0, depthMap[(i-1)+j*WIDTH]);//left
-				pt3.put(2, 0, depthMap[(i+1)+j*WIDTH]);//right
+				pt0.put(2, 0, depthMap[i+(j-1)*imageWidth]);//up
+				pt1.put(2, 0, depthMap[i+(j+1)*imageWidth]);//down
+				pt2.put(2, 0, depthMap[(i-1)+j*imageWidth]);//left
+				pt3.put(2, 0, depthMap[(i+1)+j*imageWidth]);//right
+				
+				cvSetZero(v1);
+				cvSetZero(v2);
+				
+				
+				NormMatArr[i+j*imageWidth]=getFittedPlaneNorm(v1,v2,NormMatArr[i+j*imageWidth],pt0, pt1, pt2, pt3);
+				
 				
 			
-				CvMat PlaneNorm = getFittedPlaneNorm(pt0, pt1, pt2, pt3);
 				
-		
-				NormMatArr[i+j*WIDTH]=PlaneNorm;
 				
-				cvReleaseMat(pt0);
-				cvReleaseMat(pt1);
-				cvReleaseMat(pt2);
-				cvReleaseMat(pt3);
-//			
+			
 			}
 			 
 		}
+		 
+		
+		
+		cvReleaseMat(v1);
+		cvReleaseMat(v2);
+		//cvReleaseMat(normal);
+		cvReleaseMat(pt0);
+		cvReleaseMat(pt1);
+		cvReleaseMat(pt2);
+		cvReleaseMat(pt3);
+		cvReleaseMat(mat);
+		
+			
 	}
 	
-	private CvMat getFittedPlaneNorm(CvMat pt0,CvMat pt1, CvMat pt2,CvMat pt3)
+	protected CvMat getFittedPlaneNorm(CvMat v1,CvMat v2,CvMat normal,CvMat pt0,CvMat pt1, CvMat pt2,CvMat pt3)
 	{
-		
-		CvMat v1 = cvCreateMat(3,1,CV_32FC1);
-		CvMat v2 = cvCreateMat(3,1,CV_32FC1);
-		CvMat normal= cvCreateMat(3, 1, CV_32FC1);
-		
-		
+	
 		for (int i = 0; i <3; i++) {
 		
 			
@@ -487,56 +530,77 @@ public class FeatureDescriptor {
 	
 		}
 		
-		cvReleaseMat(v1);
-		cvReleaseMat(v2);
-		
+	
 		return normal;
 	}
-	private CvMat getProjectVector(CvMat norm, int mode)
+	protected  CvMat getProjectVector(CvMat vector,CvMat norm, int mode)
 	{
-		
+//		CvMat vectorXY =cvCreateMat(3,1,CV_32FC1);
+//		CvMat vectorYZ =cvCreateMat(3,1,CV_32FC1);
+//		CvMat vectorXZ =cvCreateMat(3,1,CV_32FC1);
 
-		vectorXY =cvCreateMat(3,1,CV_32FC1);
-		vectorYZ =cvCreateMat(3,1,CV_32FC1);
-		vectorXZ =cvCreateMat(3,1,CV_32FC1);
-		
+	
 		switch(mode)
 		{
 		case PROJECTED_NORM_XY:
 			
-			vectorXY.put(0, 0, norm.get(0,0));
-			vectorXY.put(1, 0, norm.get(1,0));
-			vectorXY.put(2, 0, 0);
+			vector.put(0, 0, norm.get(0,0));
+			vector.put(1, 0, norm.get(1,0));
+			vector.put(2, 0, 0);
 			
-			return vectorXY;
+			
+			
+			return vector;
 			
 		case PROJECTED_NORM_YZ:
 		
 			
-			vectorYZ.put(0, 0, 0);
-			vectorYZ.put(1, 0, norm.get(1,0));
-			vectorYZ.put(2, 0, norm.get(2,0));
+			vector.put(0, 0, 0);
+			vector.put(1, 0, norm.get(1,0));
+			vector.put(2, 0, norm.get(2,0));
 			
-			return vectorYZ;
+			return vector;
 			
 			
 		case PROJECTED_NORM_XZ:
 			
 			
-			vectorXZ.put(0, 0, norm.get(0,0));
-			vectorXZ.put(1, 0, 0);
-			vectorXZ.put(2, 0, norm.get(2,0));
+			vector.put(0, 0, norm.get(0,0));
+			vector.put(1, 0, 0);
+			vector.put(2, 0, norm.get(2,0));
 			
-			return vectorXZ;
+			return vector;
 			
 		default :
 			
 			return null;
-			
 					
 		}
+	
+		
 		
 		
 	}
-	
+	public int getDominanAngleIdx()
+	{
+		double maximum=-10;
+		int maxIdx=-1;
+		double sum=0;
+		for (int k = 0; k < GRAD_BIN_SIZE_XY; k++) {
+			sum=0;
+			
+			for (int i = 0; i < ANGLE_BIN_SIZE; i++) {
+				for (int j = 0; j < RADIUS_BIN_SIZE; j++) {
+					sum+= HistogramXY[i][j][k];
+				}
+			}
+			
+			if(maximum<sum)
+			{
+				maximum=sum;
+				maxIdx=k;
+			}
+		}
+		return maxIdx;
+	}
 }
