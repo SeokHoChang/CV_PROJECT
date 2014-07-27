@@ -9,7 +9,6 @@ import com.googlecode.javacv.cpp.opencv_core.IplImage;
 import com.sun.corba.se.spi.ior.MakeImmutable;
 
 
-
 public class FeatureDescriptor {
 	
 	private static final int WEIGHTSCALE=1;
@@ -535,9 +534,6 @@ public class FeatureDescriptor {
 	}
 	protected  CvMat getProjectVector(CvMat vector,CvMat norm, int mode)
 	{
-//		CvMat vectorXY =cvCreateMat(3,1,CV_32FC1);
-//		CvMat vectorYZ =cvCreateMat(3,1,CV_32FC1);
-//		CvMat vectorXZ =cvCreateMat(3,1,CV_32FC1);
 
 	
 		switch(mode)
@@ -601,6 +597,9 @@ public class FeatureDescriptor {
 				maxIdx=k;
 			}
 		}
+		
+		if(maxIdx<4)
+			maxIdx=8-maxIdx;
 		return maxIdx;
 	}
 }

@@ -13,14 +13,13 @@ public class Classifier {
 	private static final int DATSIZE = 576;
 	
 	private static CvSVM svm;
-	private static CvBoost boost;
-	private static CvBoostParams param_boost;
+
 	private static CvSVMParams param_svm;
 	private static CvMat temp,temp_cls;
 	public Classifier()
 	{
 		
-	 // initBOOST();
+	 
 	  initSVM();
 		
 	}
@@ -45,45 +44,13 @@ public class Classifier {
 		temp= cvCreateMat(2, DATSIZE, CV_32FC1);
 		temp_cls=cvCreateMat(2, 1, CV_32SC1);
 	}
-	public void initBOOST()
-	{
-		boost = new CvBoost();
-		param_boost = new CvBoostParams();
-		param_boost.boost_type(CvBoost.REAL);
-		param_boost.weak_count(10);
-		param_boost.weight_trim_rate(0.95);
-		param_boost.max_depth(3);
-		param_boost.use_surrogates(false);
-		param_boost.priors(null);
-		param_boost.split_criteria(CvBoost.DEFAULT);
-	}
+
 	public static CvSVM getSVM()
 	{
 		return svm;
 	}
 	
-	public void trainBOOST(CvMat Data,int i)
-	{
-		
-		temp.put(Data);
-		
-		
-		temp_cls.put(0, 0,0);
-		temp_cls.put(1, 0,1);
-		//temp_cls.put(2, 0,2);
-		//temp_cls.put(2, 0,3);	
-		
-		boost.train(temp,1, temp_cls, null, null, null, null, param_boost, false);
-		 
-		 cvReleaseMat(temp);
-		 cvReleaseMat(temp_cls);
-	}
-	public void classifyBOOST(CvMat Data)
-	{
-		CvMat temp= cvCreateMat(2, DATSIZE, CV_32FC1);
-		temp.put(Data);
-		System.out.println(boost.predict(temp, null,null, null, false, false));
-	}
+	
 	public void trainSVM(CvMat Data,int EntrySize,int classnum)
 	{
 		

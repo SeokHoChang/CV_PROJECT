@@ -15,13 +15,7 @@ public class Converter {
 		 
 	}
 	public IplImage CvtArr2Img(IplImage DepthMap,short[] depthArr,int width, int height)
-	{
-
-//		Pointer depth_pt= new ShortPointer(depthArr);
-//	    depth_mat = cvMat(height, width, CV_16UC1,depth_pt);
-//	    
-//        cvConvert(depth_mat, DepthMap);
-//      
+	{     
 		int x;
 		int y;
 		for (int i = 0; i < depthArr.length; i++) {
